@@ -1,13 +1,14 @@
 # scripts
 
-此目录将保存用户可直接调用的轻量入口。复杂逻辑应放在 `src/`，脚本只负责参数转发和环境引导。
+`cuw.ps1` 是当前 Windows CLI 入口。复杂逻辑位于 `src/`，脚本只负责参数转发和退出码。
 
-规划命令：
+当前命令：
 
 - `setup`：安装并校验固定版本依赖。
 - `start`：启动 ComfyUI，报告地址、PID 与日志位置。
 - `stop`：安全停止本项目启动的实例。
 - `doctor`：执行只读环境诊断并给出修复建议。
-- `update`：备份配置与工作流后执行可验证、可回滚的升级。
+- `status`：显示当前状态、地址和存储位置。
+- `open-ui`、`open-models`、`open-workflows`、`open-output`：打开对应界面或目录。
 
-每个命令计划同时提供 PowerShell 与 shell 版本，参数、行为和退出码保持一致。脚本不得提交、输出或上传密钥，也不得把模型、input 或 output 写入 Git 工作区。
+`update` 和 Linux/macOS shell 入口尚未实现。脚本不得提交、输出或上传密钥，也不得把模型、input 或 output 写入 Git 工作区。

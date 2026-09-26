@@ -8,18 +8,17 @@
 - 明确 `setup`、`start`、`stop`、`doctor`、`update` 命令契约和验收标准。
 - 评估官方 Desktop、comfy-cli、API v2 proxy/SDK 与 comfy-mcp 的复用边界。
 
-## Phase 1：官方组件锁定与最小验证（当前）
+## Phase 1：官方组件锁定与最小验证（Windows NVIDIA 基线已完成）
 
-- 锁定 ComfyUI Core 与选用官方组件的明确版本，评估 GPL/AGPL/MIT 组合影响。
-- 选择一组最小图片工作流和最小视频工作流。
-- 验证目标操作系统、GPU、显存和磁盘支持矩阵。
-- 固定第一版上游、节点和模型清单。
+- 已锁定 ComfyUI v0.37.0 NVIDIA 官方便携包及 SHA-256；完整许可证组合仍需发布前复核。
+- 已在 Windows、RTX 5070 Laptop 8 GB 显存上完成安装、启动、停止和健康检查。
+- 已固定第一版上游；首批节点、模型和工作流清单移入 Phase 2。
 
-## Phase 2：可运行包装
+## Phase 2：可运行包装（当前）
 
-- 实现跨平台 `setup`、`start`、`stop`、`doctor`、`update`。
+- Windows 已实现 `setup`、`start`、`stop`、`status`、`doctor` 和图形启动器；`update` 与跨平台入口待实现。
 - 实现下载校验、配置解析、进程管理和环境诊断。
-- 提供一个图片与一个视频端到端示例及烟测。
+- 下一步锁定一个图片工作流和一个视频工作流所需的模型、节点与参数，并完成端到端烟测。
 - 提供参数化高层工具，避免 Agent 直接拼装任意节点 ID。
 
 ## Phase 3：产品化

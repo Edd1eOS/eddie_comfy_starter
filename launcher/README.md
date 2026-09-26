@@ -1,3 +1,10 @@
 # Launcher
 
-承载本项目的启动、Profile、资产中心和运行历史体验，优先调用官方 comfy-cli/API，而不复制其内部实现。
+Windows 启动器使用系统自带的 Windows PowerShell 与 WPF，不要求用户预装 Python 或 .NET SDK。
+
+- `ComfyUIWorkbench.ps1`：界面与操作编排。
+- `ComfyUIWorkbench.xaml`：界面布局和视觉样式。
+- 首页只展示准备/打开、停止、模型、工作流、输出、检查问题和存储位置。
+- ComfyUI 原生 Web 界面继续负责节点编辑、队列和预览。
+
+界面文字与名词说明遵循 [`docs/UI_SPEC.md`](../docs/UI_SPEC.md)。

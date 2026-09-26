@@ -7,18 +7,18 @@
 ## 分层
 
 ```text
-我们的 Launcher / Asset Center / Preset UI
-            ├─ comfy-cli：安装、版本、模型、节点与进程
+我们的 WPF Launcher / Asset Center / Preset UI
+            ├─ 官方 Windows Portable：隔离 Python、PyTorch 与 ComfyUI
             ├─ ComfyUI：节点图 UI 与本地推理
-            ├─ comfy-api-proxy + SDK：稳定程序接口
-            └─ comfy-mcp：Codex / OpenClaw / Agent 接入
+            ├─ 原生本地 API：健康检查、队列与工作流执行
+            └─ 后续 MCP：Codex / OpenClaw / Agent 接入
                          ↓
 固定版本的 Core + Custom Nodes + Workflows
                          ↓
 模型、input、output、缓存等仓库外运行数据
 ```
 
-- `scripts/` 提供跨平台入口，不承载复杂业务逻辑。
+- `scripts/cuw.ps1` 提供当前 Windows CLI 入口，不承载复杂业务逻辑。
 - `src/` 负责配置解析、安装编排、健康检查和进程管理。
 - `configs/` 保存默认配置以及可审计的上游、节点和模型锁定清单。
 - `workflows/` 保存可复现的图片与视频工作流。
@@ -43,7 +43,7 @@
 - `doctor`：只读检查运行时、GPU、磁盘、端口、节点和模型完整性，并给出修复建议。
 - `update`：备份配置与工作流，按锁定版本升级并支持回滚。
 
-上述命令尚处于设计阶段。实现时应提供 PowerShell 与 shell 入口，并保持参数和退出码一致。
+当前 Windows MVP 已实现 `setup`、`start`、`stop`、`status`、`doctor` 和目录入口。`update`、回滚及 Linux/macOS shell 入口仍属于后续阶段。
 
 ## 安全边界
 

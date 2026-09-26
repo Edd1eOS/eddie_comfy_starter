@@ -20,12 +20,10 @@ ComfyUI 及官方组件在 setup 时按锁定版本获取，不复制未经评�
 ```text
 git clone <future-github-repository>
 cd comfyui-media-workbench
-./scripts/setup.ps1
-./scripts/doctor.ps1
-./scripts/start.ps1
+双击 Start ComfyUI Workbench.cmd
 ```
 
-首次向导选择 GPU 档位、数据目录、离线/Partner 节点策略和首个工作流包。默认服务仅绑定 `127.0.0.1`。
+当前 Windows MVP 自动选择 NVIDIA 官方便携包，允许选择数据目录，并默认禁用 Partner/API 节点。后续向导再加入 GPU 档位和首个工作流包。服务仅绑定 `127.0.0.1`。
 
 ## 分发与许可证
 

@@ -2,13 +2,13 @@
 
 核心上游已确认为 [Comfy-Org/ComfyUI](https://github.com/Comfy-Org/ComfyUI)。当前任务从“寻找替代 Core”调整为评估官方组件的组合、版本与许可证边界。
 
-本文件用于 Phase 1 选型。目前尚未调研或确定具体上游版本。
+Windows NVIDIA MVP 已锁定官方 ComfyUI v0.37.0 便携发布资产。其他硬件包和 Agent 组件仍需分别评估。
 
 ## 候选记录
 
 | 候选 | 版本或 commit | 许可证 | 活跃度 | Windows/Linux | 图片能力 | 视频能力 | 安装复杂度 | 结论 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 待评估 | 待定 | 待核对 | 待评估 | 待验证 | 待验证 | 待验证 | 待评估 | 待定 |
+| ComfyUI Windows Portable NVIDIA | v0.37.0 | Core GPL-3.0；捆绑依赖各自许可 | 官方持续发布 | Windows + NVIDIA | 已验证启动 | Core 支持，工作流待验证 | 启动器自动下载 | Windows MVP 基线 |
 
 ## 评估维度
 
@@ -31,7 +31,7 @@
 
 | 组件 | 作用 | 许可证/边界 | 当前方向 |
 | --- | --- | --- | --- |
-| [ComfyUI Core](https://github.com/Comfy-Org/ComfyUI) | 节点图、推理引擎、原生 API | GPL-3.0；模型另有许可证 | 核心上游，精确锁版本 |
+| [ComfyUI Core](https://github.com/Comfy-Org/ComfyUI) | 节点图、推理引擎、原生 API | GPL-3.0；模型另有许可证 | v0.37.0 Windows NVIDIA 便携资产已锁定 |
 | [Comfy Desktop](https://github.com/Comfy-Org/Comfy-Desktop) | 桌面安装、隔离环境、升级与回滚 | AGPL-3.0-or-later/商业路径，发布前复核 | 参考并评估复用，不默认嵌入 |
 | [comfy-cli](https://github.com/Comfy-Org/comfy-cli) | 安装、启动、模型、节点、快照 | GPL-3.0，发布前复核 | 首选生命周期底层 |
 | [comfy-api-proxy](https://github.com/Comfy-Org/comfy-api-proxy) | 稳定、可恢复的 API v2 | MIT，发布前复核 | 首选程序接口 |

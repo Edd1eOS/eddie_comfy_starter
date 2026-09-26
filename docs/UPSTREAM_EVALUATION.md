@@ -1,5 +1,7 @@
 # 上游评估
 
+核心上游已确认为 [Comfy-Org/ComfyUI](https://github.com/Comfy-Org/ComfyUI)。当前任务从“寻找替代 Core”调整为评估官方组件的组合、版本与许可证边界。
+
 本文件用于 Phase 1 选型。目前尚未调研或确定具体上游版本。
 
 ## 候选记录
@@ -24,5 +26,17 @@
 - ComfyUI 上游版本锁定。
 - `configs/custom-nodes.lock.yaml`：每个节点固定到 commit。
 - `configs/models.lock.yaml`：每个模型记录来源、许可证与 SHA-256。
+
+## 官方组件候选
+
+| 组件 | 作用 | 许可证/边界 | 当前方向 |
+| --- | --- | --- | --- |
+| [ComfyUI Core](https://github.com/Comfy-Org/ComfyUI) | 节点图、推理引擎、原生 API | GPL-3.0；模型另有许可证 | 核心上游，精确锁版本 |
+| [Comfy Desktop](https://github.com/Comfy-Org/Comfy-Desktop) | 桌面安装、隔离环境、升级与回滚 | AGPL-3.0-or-later/商业路径，发布前复核 | 参考并评估复用，不默认嵌入 |
+| [comfy-cli](https://github.com/Comfy-Org/comfy-cli) | 安装、启动、模型、节点、快照 | GPL-3.0，发布前复核 | 首选生命周期底层 |
+| [comfy-api-proxy](https://github.com/Comfy-Org/comfy-api-proxy) | 稳定、可恢复的 API v2 | MIT，发布前复核 | 首选程序接口 |
+| [Comfy MCP](https://github.com/Comfy-Org/comfy-mcp) | Agent/MCP 接入 | AGPL-3.0-or-later/商业路径，beta | 优先复用，外加我们的高层工具与安全策略 |
+
+任何组合发布前都要做正式许可证审查，并保留第三方声明。模型权重与 Custom Nodes 的许可证不因 Core 许可证而自动获得再分发权。
 
 任何版本升级都必须先通过代表性的图片与视频工作流回归测试。

@@ -2,17 +2,19 @@
 
 ## 设计目标
 
-本项目为 ComfyUI 增加可复现、可诊断、可升级的工作站包装层，同时保持上游与本项目代码边界清晰。
+本项目在官方 ComfyUI 生态之上增加可复现、可诊断、可升级的发行与产品层，同时保持上游与本项目代码边界清晰。官方现有 Desktop、CLI、API v2 proxy/SDK 和 MCP；我们优先组合和加固，而不是从零重写。
 
 ## 分层
 
 ```text
-用户命令 setup/start/stop/doctor/update
-            ↓
-本项目包装层 src + scripts
-            ↓
-固定版本的 ComfyUI + Custom Nodes
-            ↓
+我们的 Launcher / Asset Center / Preset UI
+            ├─ comfy-cli：安装、版本、模型、节点与进程
+            ├─ ComfyUI：节点图 UI 与本地推理
+            ├─ comfy-api-proxy + SDK：稳定程序接口
+            └─ comfy-mcp：Codex / OpenClaw / Agent 接入
+                         ↓
+固定版本的 Core + Custom Nodes + Workflows
+                         ↓
 模型、input、output、缓存等仓库外运行数据
 ```
 
@@ -20,6 +22,8 @@
 - `src/` 负责配置解析、安装编排、健康检查和进程管理。
 - `configs/` 保存默认配置以及可审计的上游、节点和模型锁定清单。
 - `workflows/` 保存可复现的图片与视频工作流。
+- `launcher/` 与 `profiles/` 保存我们的启动/资产体验和可复现配置。
+- `integrations/mcp/` 保存官方 MCP 的配置、限制与高层工具适配，不复制其源码。
 
 ## 依赖锁定
 
@@ -44,3 +48,5 @@
 ## 安全边界
 
 安装脚本不得静默执行来源不明的代码。节点与模型下载必须来自锁定清单，校验版本或哈希，并记录许可证。日志不得打印密钥或完整敏感路径。
+
+原生 API 只绑定 `127.0.0.1`。Custom Nodes 视为任意代码执行，必须使用白名单、固定 commit/hash、快照和人工批准。Agent 运行还需限制最大分辨率、批量、迭代次数、GPU 时间和视频时长。

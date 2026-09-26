@@ -1,0 +1,61 @@
+# 本地环境与密钥
+.env
+.env.*
+!.env.example
+secrets/
+*.pem
+*.key
+
+# Python / JavaScript
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+node_modules/
+
+# 编辑器与系统
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# 运行状态、缓存与日志
+.runtime/
+data/
+cache/
+logs/
+*.log
+
+# 本地上游与 Custom Nodes 检出
+upstream/
+ComfyUI/
+custom_nodes/
+
+# 用户输入与生成输出
+input/
+inputs/
+output/
+outputs/
+
+# 模型文件：只提交锁定清单，不提交权重
+models/**
+!models/.gitkeep
+*.safetensors
+*.ckpt
+*.pt
+*.pth
+*.onnx
+*.gguf
+
+# 本地覆盖配置
+configs/*.local.*
+
+# 构建与测试产物
+build/
+dist/
+coverage/
+.coverage
+*.egg-info/

@@ -1,8 +1,10 @@
 ﻿[CmdletBinding()]
 param(
-    [Parameter(Position = 0)][ValidateSet('setup','start','stop','status','doctor','open-ui','open-models','open-workflows','open-output')][string]$Command = 'status',
+    [Parameter(Position = 0)][ValidateSet('setup','start','stop','status','doctor','models','download-model','open-ui','open-models','open-workflows','open-output')][string]$Command = 'status',
     [string]$DataRoot,
-    [ValidateRange(1024,65535)][int]$Port = 8188
+    [ValidateRange(1024,65535)][int]$Port = 8188,
+    [string]$ModelId,
+    [switch]$AcceptLicense
 )
 
 $ErrorActionPreference = 'Stop'
@@ -23,6 +25,16 @@ try {
             Write-Output ("存储位置：{0}" -f $summary.DataRoot)
         }
         'doctor' { Invoke-CuwDoctor -Paths $paths -Port $Port }
+        'models' {
+            foreach ($model in (Get-CuwModelCatalog -Paths $paths)) {
+                $state = Get-CuwModelState -Paths $paths -Model $model
+                Write-Output ("{0}  {1}  {2}  [{3}]" -f $model.id, $model.displayName, (Format-CuwByteSize -Bytes ([long]$model.sizeBytes)), $state.Message)
+            }
+        }
+        'download-model' {
+            if ([string]::IsNullOrWhiteSpace($ModelId)) { throw (New-CuwException -Message '请选择要下载的模型。' -ExitCode 2) }
+            Invoke-CuwModelDownload -Paths $paths -ModelId $ModelId -AcceptLicense:$AcceptLicense
+        }
         'open-ui' {
             $summary = Get-CuwSummary -Paths $paths -Port $Port
             if (-not $summary.Installed) { throw (New-CuwException -Message '工作台还没有准备好。请先运行 setup。' -ExitCode 3) }

@@ -43,7 +43,7 @@
 - `doctor`：只读检查运行时、GPU、磁盘、端口、节点和模型完整性，并给出修复建议。
 - `update`：备份配置与工作流，按锁定版本升级并支持回滚。
 
-当前 Windows MVP 已实现 `setup`、`start`、`stop`、`status`、`doctor` 和目录入口。`update`、回滚及 Linux/macOS shell 入口仍属于后续阶段。
+当前 Windows MVP 已实现 `setup`、`start`、`stop`、`status`、`doctor`、目录入口，以及基于审核清单的 `models` / `download-model`。模型下载使用 Hugging Face HTTPS 通道，支持续传，并在进入 Checkpoints 目录前校验大小与 SHA-256。`update`、回滚及 Linux/macOS shell 入口仍属于后续阶段。
 
 ## 安全边界
 

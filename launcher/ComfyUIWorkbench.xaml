@@ -113,7 +113,8 @@
               <TextBlock Text="模型决定能生成什么" Margin="0,6,0,0" FontSize="14" FontWeight="SemiBold" Foreground="#635BFF"/>
               <TextBlock Margin="0,10,0,0" TextWrapping="Wrap" FontSize="13" LineHeight="20" Foreground="{StaticResource Muted}"
                          Text="Checkpoint 是主模型；LoRA 为它增加风格、角色或细节。"/>
-              <Button x:Name="ModelsButton" Style="{StaticResource CardButton}" Content="打开模型文件夹"/>
+              <Button x:Name="ModelLibraryButton" Style="{StaticResource CardButton}" Background="#E8E7FF" Foreground="#4D46B8" Content="浏览并下载模型" ToolTip="从经过审核的 Hugging Face 模型中选择，自动下载并校验文件。"/>
+              <Button x:Name="ModelsButton" Style="{StaticResource CardButton}" Margin="0,8,0,0" Content="打开模型文件夹"/>
             </StackPanel>
           </Border>
           <Border Grid.Column="1" Style="{StaticResource Card}" Margin="10,0">

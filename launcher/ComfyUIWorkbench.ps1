@@ -8,6 +8,7 @@ $repositoryRoot = Split-Path -Parent $PSScriptRoot
 $modulePath = Join-Path $repositoryRoot 'src\ComfyUIWorkbench.Core.psm1'
 $cliPath = Join-Path $repositoryRoot 'scripts\cuw.ps1'
 $xamlPath = Join-Path $PSScriptRoot 'ComfyUIWorkbench.xaml'
+$modelLibraryXamlPath = Join-Path $PSScriptRoot 'ModelLibrary.xaml'
 Import-Module $modulePath -Force
 
 $settingsRoot = Join-Path $env:LOCALAPPDATA 'ComfyUIWorkbench'
@@ -29,7 +30,7 @@ $script:LastOutput = ''
 $reader = New-Object Xml.XmlNodeReader($xaml)
 $window = [Windows.Markup.XamlReader]::Load($reader)
 
-$names = @('StatusPill','StatusText','ChangeStorageButton','HeroTitle','HeroDescription','PrimaryActionButton','StopButton','GpuText','StorageText','ModelsButton','WorkflowsButton','OutputButton','CountsText','DoctorButton','LogExpander','BusyBar','LogText')
+$names = @('StatusPill','StatusText','ChangeStorageButton','HeroTitle','HeroDescription','PrimaryActionButton','StopButton','GpuText','StorageText','ModelLibraryButton','ModelsButton','WorkflowsButton','OutputButton','CountsText','DoctorButton','LogExpander','BusyBar','LogText')
 foreach ($name in $names) { Set-Variable -Name $name -Value $window.FindName($name) -Scope Script }
 
 function Save-CuwLauncherSettings {
@@ -80,7 +81,11 @@ function Refresh-CuwLauncher {
 }
 
 function Start-CuwLauncherAction {
-    param([Parameter(Mandatory = $true)][string]$Command, [Parameter(Mandatory = $true)][string]$DisplayName)
+    param(
+        [Parameter(Mandatory = $true)][string]$Command,
+        [Parameter(Mandatory = $true)][string]$DisplayName,
+        [string[]]$AdditionalArguments = @()
+    )
     if ($null -ne $script:ActionProcess -and -not $script:ActionProcess.HasExited) {
         [Windows.MessageBox]::Show('工作台正在执行另一项操作，请稍候。', 'ComfyUI Workbench', 'OK', 'Information') | Out-Null
         return
@@ -92,10 +97,114 @@ function Start-CuwLauncherAction {
     $script:ActionErr = Join-Path $tempRoot ($token + '.err.log')
     $script:ActionName = $DisplayName
     $argumentLine = ('-NoLogo -NoProfile -ExecutionPolicy Bypass -File "{0}" {1} -DataRoot "{2}" -Port {3}' -f $cliPath, $Command, $script:DataRoot, $script:Port)
+    foreach ($argument in $AdditionalArguments) {
+        $argumentLine += (' "{0}"' -f ([string]$argument).Replace('"', '\"'))
+    }
     $script:ActionProcess = Start-Process -FilePath "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" -ArgumentList $argumentLine -WindowStyle Hidden -RedirectStandardOutput $script:ActionOut -RedirectStandardError $script:ActionErr -PassThru
     $script:BusyBar.Visibility = 'Visible'
     $script:LogExpander.IsExpanded = $true
     Set-CuwLogText -Text ("正在执行：{0}…" -f $DisplayName)
+}
+
+function Show-CuwModelLibrary {
+    if ($null -ne $script:ActionProcess -and -not $script:ActionProcess.HasExited) {
+        [Windows.MessageBox]::Show('工作台正在执行另一项操作，请稍候。', 'ComfyUI Workbench', 'OK', 'Information') | Out-Null
+        return
+    }
+    $paths = Get-CuwPaths -RepositoryRoot $repositoryRoot -DataRoot $script:DataRoot
+    $catalog = Get-CuwModelCatalog -Paths $paths
+    [xml]$libraryXaml = Get-Content -LiteralPath $modelLibraryXamlPath -Raw -Encoding UTF8
+    $libraryReader = New-Object Xml.XmlNodeReader($libraryXaml)
+    $modelWindow = [Windows.Markup.XamlReader]::Load($libraryReader)
+    $modelWindow.Owner = $window
+    $controlNames = @(
+        'ModelList','ModelStatusPill','ModelStatusText','ModelNameText','ModelFamilyText','ModelSummaryText',
+        'ModelHardwareText','ModelSizeText','ModelLicenseText','ModelLicenseNoteText','ModelSourceButton',
+        'ModelFolderButton','ModelCloseButton','ModelDownloadButton'
+    )
+    $controls = @{}
+    foreach ($controlName in $controlNames) { $controls[$controlName] = $modelWindow.FindName($controlName) }
+    $items = @()
+    foreach ($model in $catalog) {
+        $state = Get-CuwModelState -Paths $paths -Model $model
+        $items += [pscustomobject]@{
+            ListLabel = [string]$model.displayName
+            Model = $model
+            State = $state
+        }
+    }
+    $controls.ModelList.ItemsSource = $items
+    $refreshSelection = {
+        $selected = $controls.ModelList.SelectedItem
+        if ($null -eq $selected) { return }
+        $model = $selected.Model
+        $state = Get-CuwModelState -Paths $paths -Model $model
+        $selected.State = $state
+        $controls.ModelNameText.Text = [string]$model.displayName
+        $controls.ModelFamilyText.Text = [string]$model.family
+        $controls.ModelSummaryText.Text = [string]$model.summary
+        $controls.ModelHardwareText.Text = [string]$model.hardwareNote
+        $controls.ModelSizeText.Text = Format-CuwByteSize -Bytes ([long]$model.sizeBytes)
+        $controls.ModelLicenseText.Text = [string]$model.license.id
+        $controls.ModelLicenseNoteText.Text = [string]$model.license.summaryZh
+        $controls.ModelStatusText.Text = $state.Message
+        if ($state.Status -eq 'installed') {
+            $controls.ModelStatusPill.Background = [Windows.Media.BrushConverter]::new().ConvertFromString('#DCFCE7')
+            $controls.ModelStatusText.Foreground = [Windows.Media.BrushConverter]::new().ConvertFromString('#167044')
+            $controls.ModelDownloadButton.Content = '已经安装'
+            $controls.ModelDownloadButton.IsEnabled = $false
+        }
+        elseif ($state.Status -eq 'needs-attention') {
+            $controls.ModelStatusPill.Background = [Windows.Media.BrushConverter]::new().ConvertFromString('#FDECEC')
+            $controls.ModelStatusText.Foreground = [Windows.Media.BrushConverter]::new().ConvertFromString('#A33A3A')
+            $controls.ModelDownloadButton.Content = '查看并处理'
+            $controls.ModelDownloadButton.IsEnabled = $true
+        }
+        else {
+            $controls.ModelStatusPill.Background = [Windows.Media.BrushConverter]::new().ConvertFromString('#EEF1F7')
+            $controls.ModelStatusText.Foreground = [Windows.Media.BrushConverter]::new().ConvertFromString('#596579')
+            $controls.ModelDownloadButton.Content = if ($state.Status -eq 'partial') { '继续下载' } else { '下载并安装' }
+            $controls.ModelDownloadButton.IsEnabled = $true
+        }
+    }
+    $controls.ModelList.Add_SelectionChanged($refreshSelection)
+    $controls.ModelSourceButton.Add_Click({
+        $selected = $controls.ModelList.SelectedItem
+        if ($null -ne $selected) { Start-Process -FilePath ([string]$selected.Model.modelCard) }
+    })
+    $controls.ModelFolderButton.Add_Click({ Open-CuwPath -Path $paths.CheckpointsRoot })
+    $controls.ModelCloseButton.Add_Click({ $modelWindow.Close() })
+    $controls.ModelDownloadButton.Add_Click({
+        $selected = $controls.ModelList.SelectedItem
+        if ($null -eq $selected) { return }
+        $model = $selected.Model
+        $state = Get-CuwModelState -Paths $paths -Model $model
+        if ($state.Status -eq 'installed') { return }
+        if ($state.Status -eq 'needs-attention') {
+            [Windows.MessageBox]::Show(("Checkpoints 文件夹中已有同名但不完整的文件。请先将它移出文件夹：`n`n{0}" -f $state.TargetPath), '需要处理同名文件', 'OK', 'Warning') | Out-Null
+            return
+        }
+        $message = @(
+            ("准备从 Hugging Face 下载：{0}" -f $model.displayName),
+            ("下载大小：{0}" -f (Format-CuwByteSize -Bytes ([long]$model.sizeBytes))),
+            ("许可证：{0}" -f $model.license.id),
+            '',
+            [string]$model.license.summaryZh,
+            '',
+            '继续即表示你同意遵守许可证及模型来源页的限制。'
+        ) -join [Environment]::NewLine
+        $answer = [Windows.MessageBox]::Show($message, '确认下载模型', 'YesNo', 'Information')
+        if ($answer -ne [Windows.MessageBoxResult]::Yes) { return }
+        $modelId = [string]$model.id
+        if ($modelId -notmatch '^[a-z0-9-]+$') {
+            [Windows.MessageBox]::Show('模型标识无效，请更新工作台。', 'ComfyUI Workbench', 'OK', 'Error') | Out-Null
+            return
+        }
+        $modelWindow.Close()
+        Start-CuwLauncherAction -Command 'download-model' -DisplayName ("下载 {0}" -f $model.displayName) -AdditionalArguments @('-ModelId', $modelId, '-AcceptLicense')
+    })
+    if ($items.Count -gt 0) { $controls.ModelList.SelectedIndex = 0 }
+    $null = $modelWindow.ShowDialog()
 }
 
 $timer = New-Object Windows.Threading.DispatcherTimer
@@ -137,6 +246,7 @@ $script:PrimaryActionButton.Add_Click({
 })
 $script:StopButton.Add_Click({ Start-CuwLauncherAction -Command 'stop' -DisplayName '停止运行' })
 $script:DoctorButton.Add_Click({ Start-CuwLauncherAction -Command 'doctor' -DisplayName '检查问题' })
+$script:ModelLibraryButton.Add_Click({ Show-CuwModelLibrary })
 $script:ModelsButton.Add_Click({ Start-CuwLauncherAction -Command 'open-models' -DisplayName '打开模型文件夹' })
 $script:WorkflowsButton.Add_Click({ Start-CuwLauncherAction -Command 'open-workflows' -DisplayName '打开工作流文件夹' })
 $script:OutputButton.Add_Click({ Start-CuwLauncherAction -Command 'open-output' -DisplayName '打开输出文件夹' })

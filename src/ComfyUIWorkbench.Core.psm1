@@ -63,6 +63,7 @@ function Get-CuwPaths {
         UserRoot = $user
         TempRoot = Join-Path $userdata 'temp'
         LockPath = Join-Path $repo 'configs\upstream-lock.json'
+        ModelCatalogPath = Join-Path $repo 'model-manifests\checkpoints.json'
     }
 }
 
@@ -128,6 +129,159 @@ function Get-CuwRuntimeInfo {
 function Get-CuwFileHashValue {
     param([Parameter(Mandatory = $true)][string]$Path)
     return (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant()
+}
+
+function Format-CuwByteSize {
+    param([Parameter(Mandatory = $true)][long]$Bytes)
+    if ($Bytes -ge 1GB) { return ('{0:N1} GB' -f ($Bytes / 1GB)) }
+    if ($Bytes -ge 1MB) { return ('{0:N0} MB' -f ($Bytes / 1MB)) }
+    if ($Bytes -ge 1KB) { return ('{0:N0} KB' -f ($Bytes / 1KB)) }
+    return ('{0} B' -f $Bytes)
+}
+
+function Get-CuwModelCatalog {
+    param([Parameter(Mandatory = $true)]$Paths)
+    $catalog = Read-CuwJson -Path $Paths.ModelCatalogPath
+    if ([int]$catalog.schemaVersion -ne 2) {
+        Throw-CuwError -Message '模型库清单版本不受支持，请更新工作台。' -ExitCode 3
+    }
+    return @($catalog.approved)
+}
+
+function Get-CuwApprovedModel {
+    param(
+        [Parameter(Mandatory = $true)]$Paths,
+        [Parameter(Mandatory = $true)][string]$ModelId
+    )
+    $model = Get-CuwModelCatalog -Paths $Paths |
+        Where-Object { ([string]$_.id).Equals($ModelId, [StringComparison]::OrdinalIgnoreCase) } |
+        Select-Object -First 1
+    if ($null -eq $model) {
+        Throw-CuwError -Message ("模型库中没有找到「{0}」。" -f $ModelId) -ExitCode 3
+    }
+    $fileName = [string]$model.fileName
+    if ([IO.Path]::GetFileName($fileName) -ne $fileName -or [IO.Path]::GetExtension($fileName) -notin @('.safetensors', '.ckpt')) {
+        Throw-CuwError -Message '模型库清单包含不安全的文件名。' -ExitCode 3
+    }
+    $uri = $null
+    if (-not [Uri]::TryCreate([string]$model.downloadUrl, [UriKind]::Absolute, [ref]$uri) -or
+        $uri.Scheme -ne 'https' -or $uri.Host -ne 'huggingface.co') {
+        Throw-CuwError -Message '模型库清单包含未经允许的下载地址。' -ExitCode 3
+    }
+    if ([string]$model.sha256 -notmatch '^[0-9a-fA-F]{64}$' -or [long]$model.sizeBytes -le 0) {
+        Throw-CuwError -Message '模型库清单缺少有效的大小或 SHA-256。' -ExitCode 3
+    }
+    return $model
+}
+
+function Get-CuwModelState {
+    param(
+        [Parameter(Mandatory = $true)]$Paths,
+        [Parameter(Mandatory = $true)]$Model
+    )
+    $target = Join-Path $Paths.CheckpointsRoot ([string]$Model.fileName)
+    $partial = $target + '.partial'
+    $status = 'not-installed'
+    $message = '尚未下载'
+    if (Test-Path -LiteralPath $target -PathType Leaf) {
+        $length = (Get-Item -LiteralPath $target).Length
+        if ($length -eq [long]$Model.sizeBytes) { $status = 'installed'; $message = '已安装' }
+        else { $status = 'needs-attention'; $message = '文件不完整，需要处理' }
+    }
+    elseif (Test-Path -LiteralPath $partial -PathType Leaf) {
+        $status = 'partial'
+        $message = ('可继续下载（已有 {0}）' -f (Format-CuwByteSize -Bytes (Get-Item -LiteralPath $partial).Length))
+    }
+    return [pscustomobject]@{
+        Status = $status
+        Message = $message
+        TargetPath = $target
+        PartialPath = $partial
+    }
+}
+
+function Invoke-CuwHuggingFaceDownload {
+    param(
+        [Parameter(Mandatory = $true)][string]$Url,
+        [Parameter(Mandatory = $true)][string]$Destination,
+        [Parameter(Mandatory = $true)][string]$DisplayName
+    )
+    $curl = Get-Command curl.exe -ErrorAction SilentlyContinue
+    if ($null -ne $curl) {
+        Write-Output '下载中断后可以再次点击下载，工作台会从已完成的位置继续。'
+        & $curl.Source --location --fail --retry 5 --retry-delay 2 --connect-timeout 30 --continue-at - --output $Destination --user-agent 'ComfyUIWorkbench/1.0' $Url
+        if ($LASTEXITCODE -ne 0) {
+            Throw-CuwError -Message ("{0}下载中断，已保留进度；请稍后重试。" -f $DisplayName) -ExitCode 4
+        }
+        return
+    }
+    if (Test-Path -LiteralPath $Destination -PathType Leaf) {
+        Remove-Item -LiteralPath $Destination -Force
+    }
+    $bits = Get-Command Start-BitsTransfer -ErrorAction SilentlyContinue
+    if ($null -eq $bits) {
+        Throw-CuwError -Message '系统缺少安全下载组件（curl/BITS），请更新 Windows 后重试。' -ExitCode 3
+    }
+    Start-BitsTransfer -Source $Url -Destination $Destination -DisplayName ("ComfyUI 模型：{0}" -f $DisplayName)
+}
+
+function Invoke-CuwModelDownload {
+    param(
+        [Parameter(Mandatory = $true)]$Paths,
+        [Parameter(Mandatory = $true)][string]$ModelId,
+        [switch]$AcceptLicense
+    )
+    if (-not $AcceptLicense) {
+        Throw-CuwError -Message '下载前需要在模型库中确认许可证和使用限制。' -ExitCode 2
+    }
+    Initialize-CuwLayout -Paths $Paths
+    $model = Get-CuwApprovedModel -Paths $Paths -ModelId $ModelId
+    $state = Get-CuwModelState -Paths $Paths -Model $model
+    if (Test-Path -LiteralPath $state.TargetPath -PathType Leaf) {
+        $length = (Get-Item -LiteralPath $state.TargetPath).Length
+        if ($length -ne [long]$model.sizeBytes) {
+            Throw-CuwError -Message ("已有同名文件但大小不正确。请先将它移出 Checkpoints 文件夹：{0}" -f $state.TargetPath) -ExitCode 4
+        }
+        Write-Output ("正在校验已安装的 {0}…" -f $model.displayName)
+        if ((Get-CuwFileHashValue -Path $state.TargetPath) -eq ([string]$model.sha256).ToLowerInvariant()) {
+            Write-Output ("{0} 已安装且校验通过，无需重复下载。" -f $model.displayName)
+            return
+        }
+        Throw-CuwError -Message ("已有同名文件但校验不通过。请先将它移出 Checkpoints 文件夹：{0}" -f $state.TargetPath) -ExitCode 4
+    }
+    if (Test-Path -LiteralPath $state.PartialPath -PathType Leaf) {
+        $partialLength = (Get-Item -LiteralPath $state.PartialPath).Length
+        if ($partialLength -gt [long]$model.sizeBytes) {
+            Remove-Item -LiteralPath $state.PartialPath -Force
+            $partialLength = 0
+        }
+    }
+    else { $partialLength = 0 }
+    $drive = $null
+    try { $drive = New-Object IO.DriveInfo([IO.Path]::GetPathRoot($state.TargetPath)) }
+    catch { Write-Output '无法提前读取磁盘空间，将继续尝试下载。' }
+    if ($null -ne $drive) {
+        $required = ([long]$model.sizeBytes - $partialLength) + 512MB
+        if ($drive.AvailableFreeSpace -lt $required) {
+            Throw-CuwError -Message ("存储空间不足。完成下载至少还需要 {0}。" -f (Format-CuwByteSize -Bytes $required)) -ExitCode 4
+        }
+    }
+    Write-Output ("正在从 Hugging Face 下载：{0}（{1}）" -f $model.displayName, (Format-CuwByteSize -Bytes ([long]$model.sizeBytes)))
+    Write-Output ("许可证：{0}；下载表示你同意遵守该许可证的使用限制。" -f $model.license.id)
+    Invoke-CuwHuggingFaceDownload -Url ([string]$model.downloadUrl) -Destination $state.PartialPath -DisplayName ([string]$model.displayName)
+    $downloadedSize = (Get-Item -LiteralPath $state.PartialPath).Length
+    if ($downloadedSize -ne [long]$model.sizeBytes) {
+        Throw-CuwError -Message ("下载文件大小不正确（实际 {0}，预期 {1}）。已保留进度，请重试。" -f (Format-CuwByteSize -Bytes $downloadedSize), (Format-CuwByteSize -Bytes ([long]$model.sizeBytes))) -ExitCode 4
+    }
+    Write-Output '下载完成，正在校验文件完整性…'
+    $actualHash = Get-CuwFileHashValue -Path $state.PartialPath
+    if ($actualHash -ne ([string]$model.sha256).ToLowerInvariant()) {
+        Remove-Item -LiteralPath $state.PartialPath -Force
+        Throw-CuwError -Message 'SHA-256 校验失败，已删除不可信的下载文件。请重新下载。' -ExitCode 4
+    }
+    Move-Item -LiteralPath $state.PartialPath -Destination $state.TargetPath
+    Write-Output ("安装完成：{0}" -f $model.displayName)
+    Write-Output ("保存位置：{0}" -f $state.TargetPath)
 }
 
 function Invoke-CuwDownload {
@@ -396,5 +550,6 @@ function Open-CuwPath {
 Export-ModuleMember -Function @(
     'New-CuwException','Get-CuwExitCode','Resolve-CuwDataRoot','Get-CuwPaths','Initialize-CuwLayout',
     'Read-CuwJson','Write-CuwJsonAtomic','Get-CuwRuntimeInfo','Get-CuwFileHashValue','Invoke-CuwSetup',
+    'Format-CuwByteSize','Get-CuwModelCatalog','Get-CuwApprovedModel','Get-CuwModelState','Invoke-CuwModelDownload',
     'Test-CuwHealth','Invoke-CuwStart','Invoke-CuwStop','Get-CuwGpuSummary','Get-CuwSummary','Invoke-CuwDoctor','Open-CuwPath'
 )

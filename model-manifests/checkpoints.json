@@ -1,28 +1,32 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "reviewedAt": "2026-10-01",
   "commercialUseDefinition": "The publisher's stated license permits commercial use, subject to the license restrictions. This is not a warranty about training-data or third-party rights.",
-  "installed": [
+  "approved": [
     {
       "id": "abyss-orange-mix-3-b4",
       "displayName": "AbyssOrangeMix 3 B4（深渊橘）",
       "family": "Stable Diffusion 1.5",
+      "summary": "偏日系插画的主模型。文件较小，适合先熟悉 ComfyUI。",
+      "hardwareNote": "8 GB 显存可较轻松使用，建议从 512 × 512 开始。",
       "fileName": "AOM3B4_orangemixs.safetensors",
-      "target": "data/userdata/models/checkpoints/AOM3B4_orangemixs.safetensors",
       "sizeBytes": 2132626090,
       "sha256": "b8d425c720e578f8b9a9140a25976518c17e102557e92c0ff5809e481eb47b38",
       "publisher": "WarriorMama777",
-      "source": "https://huggingface.co/WarriorMama777/OrangeMixs/blob/main/Models/AbyssOrangeMix3/AOM3B4_orangemixs.safetensors",
+      "revision": "ec9df50045e9687fd7ea8116db84c4ad5c4a4358",
+      "source": "https://huggingface.co/WarriorMama777/OrangeMixs/blob/ec9df50045e9687fd7ea8116db84c4ad5c4a4358/Models/AbyssOrangeMix3/AOM3B4_orangemixs.safetensors",
+      "downloadUrl": "https://huggingface.co/WarriorMama777/OrangeMixs/resolve/ec9df50045e9687fd7ea8116db84c4ad5c4a4358/Models/AbyssOrangeMix3/AOM3B4_orangemixs.safetensors",
       "modelCard": "https://huggingface.co/WarriorMama777/OrangeMixs",
       "license": {
         "id": "CreativeML OpenRAIL-M",
         "url": "https://huggingface.co/spaces/CompVis/stable-diffusion-license",
         "commercialUse": true,
         "redistribution": true,
+        "summaryZh": "允许商用与再分发，但必须遵守用途限制；分发模型时需要同时提供许可证及相同限制。",
         "conditions": "Commercial use and redistribution are permitted subject to the license use restrictions. Redistributors must provide the same restrictions and a copy of the license."
       },
       "review": {
-        "status": "installed-with-conditions",
+        "status": "approved-with-conditions",
         "hashMatchesPublisherFile": true,
         "provenanceNote": "The publisher documents this as a merged model and warns that some models in the merge ecosystem may include NAI-derived weights. Do not describe it as risk-free or unrestricted open source."
       }
@@ -31,28 +35,32 @@
       "id": "dreamshaper-xl-lightning",
       "displayName": "DreamShaper XL Lightning",
       "family": "Stable Diffusion XL Lightning",
+      "summary": "兼顾写实与插画的快速 SDXL 主模型，少量采样步骤即可出图。",
+      "hardwareNote": "画质和分辨率更高，但显存压力更大；8 GB 显存建议先用 1024 × 1024、4–6 步测试。",
       "fileName": "DreamShaperXL_Lightning.safetensors",
-      "target": "data/userdata/models/checkpoints/DreamShaperXL_Lightning.safetensors",
       "sizeBytes": 6939220250,
       "sha256": "fdbe56354b8f876b736f24d3ad867ecd4140c019f57642ec8ddd878088d44f64",
       "publisher": "Lykon",
-      "source": "https://huggingface.co/Lykon/dreamshaper-xl-lightning/blob/main/DreamShaperXL_Lightning.safetensors",
+      "revision": "561086c22aba3925b1e8803a73857f061635c7c3",
+      "source": "https://huggingface.co/Lykon/dreamshaper-xl-lightning/blob/561086c22aba3925b1e8803a73857f061635c7c3/DreamShaperXL_Lightning.safetensors",
+      "downloadUrl": "https://huggingface.co/Lykon/dreamshaper-xl-lightning/resolve/561086c22aba3925b1e8803a73857f061635c7c3/DreamShaperXL_Lightning.safetensors",
       "modelCard": "https://huggingface.co/Lykon/dreamshaper-xl-lightning",
       "license": {
         "id": "OpenRAIL++",
         "url": "https://huggingface.co/Lykon/dreamshaper-xl-lightning",
         "commercialUse": true,
         "redistribution": true,
+        "summaryZh": "允许商用与再分发，但仍需遵守 OpenRAIL++ 的用途限制。",
         "conditions": "Use and redistribution remain subject to the OpenRAIL++ use restrictions."
       },
       "review": {
-        "status": "installed-with-conditions",
+        "status": "approved-with-conditions",
         "hashMatchesPublisherFile": true,
         "provenanceNote": "The local file exactly matches the publisher's Hugging Face release."
       }
     }
   ],
-  "reviewedNotInstalled": [
+  "reviewedNotApproved": [
     {
       "id": "anything-v5",
       "displayName": "Anything V5",

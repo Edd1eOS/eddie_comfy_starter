@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "reviewedAt": "2026-10-01",
+  "commercialUseDefinition": "The publisher's stated license permits commercial use, subject to the license restrictions. This is not a warranty about training-data or third-party rights.",
+  "installed": [
+    {
+      "id": "abyss-orange-mix-3-b4",
+      "displayName": "AbyssOrangeMix 3 B4（深渊橘）",
+      "family": "Stable Diffusion 1.5",
+      "fileName": "AOM3B4_orangemixs.safetensors",
+      "target": "data/userdata/models/checkpoints/AOM3B4_orangemixs.safetensors",
+      "sizeBytes": 2132626090,
+      "sha256": "b8d425c720e578f8b9a9140a25976518c17e102557e92c0ff5809e481eb47b38",
+      "publisher": "WarriorMama777",
+      "source": "https://huggingface.co/WarriorMama777/OrangeMixs/blob/main/Models/AbyssOrangeMix3/AOM3B4_orangemixs.safetensors",
+      "modelCard": "https://huggingface.co/WarriorMama777/OrangeMixs",
+      "license": {
+        "id": "CreativeML OpenRAIL-M",
+        "url": "https://huggingface.co/spaces/CompVis/stable-diffusion-license",
+        "commercialUse": true,
+        "redistribution": true,
+        "conditions": "Commercial use and redistribution are permitted subject to the license use restrictions. Redistributors must provide the same restrictions and a copy of the license."
+      },
+      "review": {
+        "status": "installed-with-conditions",
+        "hashMatchesPublisherFile": true,
+        "provenanceNote": "The publisher documents this as a merged model and warns that some models in the merge ecosystem may include NAI-derived weights. Do not describe it as risk-free or unrestricted open source."
+      }
+    },
+    {
+      "id": "dreamshaper-xl-lightning",
+      "displayName": "DreamShaper XL Lightning",
+      "family": "Stable Diffusion XL Lightning",
+      "fileName": "DreamShaperXL_Lightning.safetensors",
+      "target": "data/userdata/models/checkpoints/DreamShaperXL_Lightning.safetensors",
+      "sizeBytes": 6939220250,
+      "sha256": "fdbe56354b8f876b736f24d3ad867ecd4140c019f57642ec8ddd878088d44f64",
+      "publisher": "Lykon",
+      "source": "https://huggingface.co/Lykon/dreamshaper-xl-lightning/blob/main/DreamShaperXL_Lightning.safetensors",
+      "modelCard": "https://huggingface.co/Lykon/dreamshaper-xl-lightning",
+      "license": {
+        "id": "OpenRAIL++",
+        "url": "https://huggingface.co/Lykon/dreamshaper-xl-lightning",
+        "commercialUse": true,
+        "redistribution": true,
+        "conditions": "Use and redistribution remain subject to the OpenRAIL++ use restrictions."
+      },
+      "review": {
+        "status": "installed-with-conditions",
+        "hashMatchesPublisherFile": true,
+        "provenanceNote": "The local file exactly matches the publisher's Hugging Face release."
+      }
+    }
+  ],
+  "reviewedNotInstalled": [
+    {
+      "id": "anything-v5",
+      "displayName": "Anything V5",
+      "fileName": "anything-v5.safetensors",
+      "sizeBytes": 2132625894,
+      "sha256": "7f96a1a9ca9b3a3242a9ae95d19284f0d2da8d5282b42d2d974398bf7663a252",
+      "archiveSource": "https://huggingface.co/genai-archive/anything-v5/blob/main/anything-v5.safetensors",
+      "archiveModelCard": "https://huggingface.co/genai-archive/anything-v5",
+      "declaredLicense": "CreativeML OpenRAIL-M",
+      "review": {
+        "status": "not-installed-provenance-warning",
+        "hashMatchesArchiveFile": true,
+        "reason": "The matching public repository identifies itself as a re-upload/archive rather than a first-party release. The declared license permits commercial use with restrictions, but the original-author provenance is not strong enough for the approved set."
+      }
+    }
+  ]
+}

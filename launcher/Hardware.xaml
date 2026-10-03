@@ -1,0 +1,16 @@
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="选择显卡 / 安装环境" Width="620" Height="440" ResizeMode="NoResize" WindowStartupLocation="CenterOwner" Background="#E7F4EA" FontFamily="Microsoft YaHei UI">
+  <Grid Margin="28">
+    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+    <TextBlock Text="选择这台电脑使用的计算设备" FontSize="22" FontWeight="SemiBold" Foreground="#173E32"/>
+    <TextBlock x:Name="DetectedText" Grid.Row="1" Margin="0,12,0,16" TextWrapping="Wrap" Foreground="#3C7057"/>
+    <ComboBox x:Name="HardwareSelector" Grid.Row="2" DisplayMemberPath="name" FontSize="15" Padding="8"/>
+    <StackPanel Grid.Row="3" Margin="0,18,0,12">
+      <TextBlock x:Name="HardwareNote" TextWrapping="Wrap" FontSize="14" Foreground="#173E32"/>
+      <TextBlock Margin="0,14,0,0" TextWrapping="Wrap" Foreground="#3C7057" Text="首次联网下载约 1.5–1.9 GB，解压需要更多空间。不修改系统 Python；模型与输出保持不变。显卡驱动仍需自行安装。切换前请停止创作服务。"/>
+    </StackPanel>
+    <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right">
+      <Button x:Name="CancelButton" Content="取消" Padding="20,10" Margin="0,0,12,0"/>
+      <Button x:Name="InstallButton" Content="选择并一键安装 / 检查" Padding="20,10" Background="#BCEDAD"/>
+    </StackPanel>
+  </Grid>
+</Window>

@@ -64,6 +64,7 @@ function Refresh-CuwLauncher {
         $summary = Get-CuwSummary -Paths $paths -Port $script:Port
         $script:StatusText.Text = $summary.Message
         $script:GpuText.Text = $summary.Gpu
+        $window.FindName('HardwareProfileText').Text = '当前方案：' + $paths.Hardware.name
         $script:StorageText.Text = $summary.DataRoot
         $script:CountsText.Text = ("{0} 个主模型  ·  {1} 个工作流" -f $summary.CheckpointCount, $summary.WorkflowCount)
         if ($summary.Status -eq 'running') {
@@ -84,7 +85,7 @@ function Refresh-CuwLauncher {
             $script:StatusPill.Background = [Windows.Media.BrushConverter]::new().ConvertFromString('#FFF4D8')
             $script:StatusText.Foreground = [Windows.Media.BrushConverter]::new().ConvertFromString('#855F00')
             $script:HeroTitle.Text = '先准备工作台'
-            $script:HeroDescription.Text = '将下载约 1.8 GB 的官方 ComfyUI 便携环境。Python 和所需组件会保存在独立目录，不影响电脑里的开发环境。'
+            $script:HeroDescription.Text = '先选择显卡或 CPU，再一键下载对应环境。Python 和所需组件保存在独立目录，不影响系统环境。'
             $script:PrimaryActionButton.Content = '准备工作台'
         }
     }
@@ -119,6 +120,35 @@ function Start-CuwLauncherAction {
     $script:BusyBar.Visibility = 'Visible'
     $script:LogExpander.IsExpanded = $true
     Set-CuwLogText -Text ("正在执行：{0}…" -f $DisplayName)
+}
+
+function Show-CuwHardwareDialog {
+    if ($null -ne $script:ActionProcess -and -not $script:ActionProcess.HasExited) {
+        [Windows.MessageBox]::Show('请等待当前操作完成。', '安装环境') | Out-Null
+        return
+    }
+    $paths = Get-CuwPaths -RepositoryRoot $repositoryRoot -DataRoot $script:DataRoot
+    [xml]$hardwareXaml = Get-Content (Join-Path $PSScriptRoot 'Hardware.xaml') -Raw -Encoding UTF8
+    $dialog = [Windows.Markup.XamlReader]::Load([Xml.XmlNodeReader]::new($hardwareXaml))
+    $dialog.Owner = $window
+    $selector = $dialog.FindName('HardwareSelector')
+    $note = $dialog.FindName('HardwareNote')
+    $dialog.FindName('DetectedText').Text = '检测到：' + (Get-CuwGpuSummary)
+    $profiles = @(Get-CuwHardwareProfiles $repositoryRoot)
+    $selector.ItemsSource = $profiles
+    $selector.Add_SelectionChanged({ if ($selector.SelectedItem) { $note.Text = $selector.SelectedItem.note } })
+    $selector.SelectedItem = $profiles | Where-Object { $_.id -eq $paths.Hardware.id }
+    $dialog.FindName('CancelButton').Add_Click({ $dialog.Close() })
+    $dialog.FindName('InstallButton').Add_Click({
+        try {
+            Set-CuwHardwareProfile -Paths $paths -ProfileId $selector.SelectedItem.id
+            $dialog.DialogResult = $true
+        } catch { [Windows.MessageBox]::Show($_.Exception.Message, '无法切换环境') | Out-Null }
+    })
+    if ($dialog.ShowDialog() -eq $true) {
+        Refresh-CuwLauncher
+        Start-CuwLauncherAction -Command 'setup' -DisplayName '配置并检查所选硬件环境'
+    }
 }
 
 function Show-CuwModelLibrary {
@@ -257,8 +287,9 @@ $script:PrimaryActionButton.Add_Click({
     $paths = Get-CuwPaths -RepositoryRoot $repositoryRoot -DataRoot $script:DataRoot
     $summary = Get-CuwSummary -Paths $paths -Port $script:Port
     if ($summary.Installed) { Start-CuwLauncherAction -Command 'open-ui' -DisplayName '打开创作界面' }
-    else { Start-CuwLauncherAction -Command 'setup' -DisplayName '准备工作台' }
+    else { Show-CuwHardwareDialog }
 })
+$window.FindName('HardwareButton').Add_Click({ Show-CuwHardwareDialog })
 $script:StopButton.Add_Click({ Start-CuwLauncherAction -Command 'stop' -DisplayName '停止运行' })
 $script:DoctorButton.Add_Click({ Start-CuwLauncherAction -Command 'doctor' -DisplayName '检查问题' })
 $script:ModelLibraryButton.Add_Click({ Show-CuwModelLibrary })

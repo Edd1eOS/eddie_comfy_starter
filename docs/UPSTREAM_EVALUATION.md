@@ -40,3 +40,9 @@ Windows NVIDIA MVP 已锁定官方 ComfyUI v0.37.0 便携发布资产。其他�
 任何组合发布前都要做正式许可证审查，并保留第三方声明。模型权重与 Custom Nodes 的许可证不因 Core 许可证而自动获得再分发权。
 
 任何版本升级都必须先通过代表性的图片与视频工作流回归测试。
+
+## Hardware distribution verification (2026-10-03)
+
+Verified release assets and SHA-256 digests via `https://api.github.com/repos/Comfy-Org/ComfyUI/releases/tags/v0.37.0`: official NVIDIA, NVIDIA CUDA 12.6, AMD and Intel portable archives exist. The pinned upstream `.ci/windows_amd_base_files/run_amd_gpu.bat` and `.ci/windows_intel_base_files/run_intel_gpu.bat` both launch embedded Python with `--windows-standalone-build`; CPU additionally uses `--cpu`. These are upstream ComfyUI GPL-3.0 packages with bundled dependency licenses, not newly licensed assets. No model weights are included in our Git repository.
+
+Sources: [release](https://github.com/Comfy-Org/ComfyUI/releases/tag/v0.37.0), [pinned README](https://github.com/Comfy-Org/ComfyUI/blob/v0.37.0/README.md). AMD/Intel support is conditional on compatible device/driver; no physical AMD/Intel validation has been performed here. See `HARDWARE.md`.

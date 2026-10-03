@@ -34,6 +34,10 @@ function Get-CuwPaths {
     )
     $repo = [IO.Path]::GetFullPath($RepositoryRoot)
     $data = Resolve-CuwDataRoot -Path $DataRoot
+    $selection = Read-CuwJson -Path (Join-Path $data 'hardware.json') -Optional
+    $profileId = if ($null -eq $selection) { 'nvidia' } else { [string]$selection.profile }
+    $hardware = @(Get-CuwHardwareProfiles $repo | Where-Object { $_.id -eq $profileId })
+    if ($hardware.Count -ne 1) { throw 'Unknown hardware profile in hardware.json.' }
     $runtime = Join-Path $data 'runtime'
     $userdata = Join-Path $data 'userdata'
     $models = Join-Path $userdata 'models'
@@ -43,7 +47,8 @@ function Get-CuwPaths {
         DataRoot = $data
         RuntimeRoot = $runtime
         VersionsRoot = Join-Path $runtime 'versions'
-        VersionRoot = Join-Path $runtime 'versions\comfyui-v0.37.0-nvidia'
+        Hardware = $hardware[0]
+        VersionRoot = Join-Path $runtime ('versions\comfyui-v0.37.0-' + $hardware[0].runtime)
         DownloadsRoot = Join-Path $data 'downloads'
         StateRoot = Join-Path $data 'state'
         LogsRoot = Join-Path $data 'logs'
@@ -309,14 +314,13 @@ function Invoke-CuwSetup {
     if ($env:OS -ne 'Windows_NT') {
         Throw-CuwError -Message '当前启动器只支持 Windows。' -ExitCode 2
     }
-    if ((Get-CuwGpuSummary) -match '^未检测') {
-        Throw-CuwError -Message '当前版本需要 NVIDIA 显卡；未检测到可用的 NVIDIA 驱动。' -ExitCode 2
-    }
     Initialize-CuwLayout -Paths $Paths
     $lock = Read-CuwJson -Path $Paths.LockPath
-    $asset = $lock.comfyui.windowsNvidia
+    $asset = $Paths.Hardware
+    Write-Output ("安装方案：{0}`n{1}" -f $asset.name, $asset.note)
     $runtime = Get-CuwRuntimeInfo -Paths $Paths
     if ($null -ne $runtime) {
+        Test-CuwCompute -Paths $Paths
         Write-Output ("工作台已经准备完成：ComfyUI {0}" -f $lock.comfyui.version)
         return
     }
@@ -328,7 +332,7 @@ function Invoke-CuwSetup {
         }
     }
     if (-not (Test-Path -LiteralPath $archive -PathType Leaf)) {
-        Invoke-CuwDownload -Url ([string]$asset.url) -Destination $archive
+        Invoke-CuwDownload -Url ("https://github.com/Comfy-Org/ComfyUI/releases/download/{0}/{1}" -f $lock.comfyui.version, $asset.fileName) -Destination $archive
     }
     Write-Output '正在校验下载文件…'
     $actualHash = Get-CuwFileHashValue -Path $archive
@@ -368,6 +372,7 @@ function Invoke-CuwSetup {
     if ($null -eq (Get-CuwRuntimeInfo -Paths $Paths)) {
         Throw-CuwError -Message '运行环境安装后验证失败。' -ExitCode 4
     }
+    Test-CuwCompute -Paths $Paths
     Write-Output '工作台准备完成。无需配置系统 Python。'
 }
 
@@ -422,6 +427,7 @@ function Invoke-CuwStart {
     if (-not (Test-CuwPortAvailable -Port $Port)) {
         Throw-CuwError -Message ("端口 {0} 已被其他程序占用。" -f $Port) -ExitCode 5
     }
+    Test-CuwCompute -Paths $Paths
     $timestamp = Get-Date -Format 'yyyyMMdd-HHmmss'
     $stdout = Join-Path $Paths.LogsRoot ("comfyui-{0}.log" -f $timestamp)
     $stderr = Join-Path $Paths.LogsRoot ("comfyui-{0}.error.log" -f $timestamp)
@@ -438,6 +444,7 @@ function Invoke-CuwStart {
         '--output-directory', $Paths.OutputRoot,
         '--temp-directory', $Paths.TempRoot
     )
+    if ($Paths.Hardware.backend -eq 'cpu') { $arguments += '--cpu' }
     $extraModelPaths = Update-CuwExtraModelPaths -Paths $Paths
     if ($null -ne $extraModelPaths) { $arguments += @('--extra-model-paths-config', $extraModelPaths) }
     $argumentLine = (($arguments | ForEach-Object { ConvertTo-CuwCommandLineArgument -Value ([string]$_) }) -join ' ')
@@ -485,7 +492,11 @@ function Invoke-CuwStop {
 
 function Get-CuwGpuSummary {
     $nvidia = Get-Command nvidia-smi.exe -ErrorAction SilentlyContinue
-    if ($null -eq $nvidia) { return '未检测到 NVIDIA 显卡' }
+    if ($null -eq $nvidia) {
+        $adapters = @(Get-CimInstance Win32_VideoController -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Name)
+        if ($adapters.Count) { return ($adapters -join ' / ') }
+        return '未检测到显卡；可选择 CPU'
+    }
     try {
         $line = & $nvidia.Source --query-gpu=name,memory.total --format=csv,noheader,nounits 2>$null | Select-Object -First 1
         if ($line -match '^\s*(.+),\s*(\d+)\s*$') { return ("{0} · {1:N1} GB 显存" -f $matches[1].Trim(), ([double]$matches[2] / 1024)) }
@@ -505,12 +516,21 @@ function Get-CuwSummary {
     $status = 'notReady'
     $message = '需要准备工作台'
     if ($null -ne $runtime) { $status = 'ready'; $message = '可以开始创作' }
+    $installed = $null -ne $runtime
+    if ($installed) {
+        $check = Read-CuwJson -Path (Join-Path $Paths.VersionRoot ('compute-' + $Paths.Hardware.backend + '.json')) -Optional
+        if (($null -ne $check -and -not $check.success) -or ($null -eq $check -and $Paths.Hardware.id -ne 'nvidia')) {
+            $installed = $false
+            $status = 'needsCheck'
+            $message = '所选环境需要检查计算能力'
+        }
+    }
     if ($owned -and -not $healthy) { $status = 'starting'; $message = '创作服务正在启动' }
     if ($healthy) { $status = 'running'; $message = '创作服务正在运行' }
     return [pscustomobject]@{
         Status = $status
         Message = $message
-        Installed = $null -ne $runtime
+        Installed = $installed
         Running = $healthy
         Url = ("http://127.0.0.1:{0}" -f $Port)
         DataRoot = $Paths.DataRoot
@@ -525,7 +545,7 @@ function Invoke-CuwDoctor {
     $failures = 0
     if ($env:OS -eq 'Windows_NT') { Write-Output '[通过] 系统：Windows' } else { Write-Output '[失败] 系统：当前启动器只支持 Windows'; $failures++ }
     $gpu = Get-CuwGpuSummary
-    if ($gpu -match '^未检测') { Write-Output ("[失败] 显卡：{0}" -f $gpu); $failures++ } else { Write-Output ("[通过] 显卡：{0}" -f $gpu) }
+    Write-Output ("[信息] 设备：{0}；安装方案：{1}" -f $gpu, $Paths.Hardware.name)
     $drive = Get-PSDrive -Name ([IO.Path]::GetPathRoot($Paths.DataRoot).Substring(0,1)) -ErrorAction SilentlyContinue
     if ($null -ne $drive) { Write-Output ("[通过] 存储空间：剩余 {0:N1} GB" -f ($drive.Free / 1GB)) }
     $runtime = Get-CuwRuntimeInfo -Paths $Paths
@@ -533,6 +553,7 @@ function Invoke-CuwDoctor {
         Write-Output '[通过] 运行环境：隔离 Python 和 ComfyUI 文件完整'
         $version = & $runtime.PythonPath --version 2>&1
         Write-Output ("[通过] 私有 Python：{0}" -f $version)
+        try { Test-CuwCompute -Paths $Paths } catch { Write-Output ("[失败] " + $_.Exception.Message); $failures++ }
     }
     else { Write-Output '[失败] 运行环境：尚未准备或文件不完整'; $failures++ }
     $summary = Get-CuwSummary -Paths $Paths -Port $Port
@@ -550,8 +571,10 @@ function Open-CuwPath {
 }
 
 . (Join-Path $PSScriptRoot 'ComfyUIWorkbench.ModelPaths.ps1')
+. (Join-Path $PSScriptRoot 'ComfyUIWorkbench.Hardware.ps1')
 
 Export-ModuleMember -Function @(
+    'Get-CuwHardwareProfiles','Set-CuwHardwareProfile','Test-CuwCompute',
     'Get-CuwModelPathTypes','Get-CuwExternalModelPaths','Save-CuwExternalModelPaths','Update-CuwExtraModelPaths',
     'New-CuwException','Get-CuwExitCode','Resolve-CuwDataRoot','Get-CuwPaths','Initialize-CuwLayout',
     'Read-CuwJson','Write-CuwJsonAtomic','Get-CuwRuntimeInfo','Get-CuwFileHashValue','Invoke-CuwSetup',

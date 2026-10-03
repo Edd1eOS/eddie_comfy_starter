@@ -5,7 +5,8 @@ param(
     [int]$Height = 760,
     [switch]$ExpandLogs,
     [switch]$ReadyPreview,
-    [switch]$ModelPathsPreview
+    [switch]$ModelPathsPreview,
+    [switch]$HardwarePreview
 )
 
 $ErrorActionPreference = 'Stop'
@@ -13,6 +14,7 @@ Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase
 $repositoryRoot = Split-Path -Parent $PSScriptRoot
 $xamlPath = Join-Path $repositoryRoot 'launcher\ComfyUIWorkbench.xaml'
 if ($ModelPathsPreview) { $xamlPath = Join-Path $repositoryRoot 'launcher\ModelPaths.xaml' }
+if ($HardwarePreview) { $xamlPath = Join-Path $repositoryRoot 'launcher\Hardware.xaml' }
 [xml]$xaml = Get-Content -LiteralPath $xamlPath -Raw -Encoding UTF8
 $reader = New-Object Xml.XmlNodeReader($xaml)
 $window = [Windows.Markup.XamlReader]::Load($reader)
@@ -23,6 +25,14 @@ $window.Left = -20000
 $window.Top = -20000
 $window.Width = $Width
 $window.Height = $Height
+if ($HardwarePreview) {
+    Import-Module (Join-Path $repositoryRoot 'src\ComfyUIWorkbench.Core.psm1') -Force
+    $profiles = @(Get-CuwHardwareProfiles $repositoryRoot)
+    $window.FindName('HardwareSelector').ItemsSource = $profiles
+    $window.FindName('HardwareSelector').SelectedIndex = 2
+    $window.FindName('HardwareNote').Text = $profiles[2].note
+    $window.FindName('DetectedText').Text = '检测到：NVIDIA GeForce RTX 5070 Laptop GPU'
+}
 if ($ModelPathsPreview) {
     Import-Module (Join-Path $repositoryRoot 'src\ComfyUIWorkbench.Core.psm1') -Force
     $types = @(Get-CuwModelPathTypes)

@@ -34,6 +34,7 @@ $module = Get-Module ComfyUIWorkbench.Core
     function script:Test-CuwOwnedProcess { param($Paths,$State) return $false }
     function script:Test-CuwPortAvailable { param($Port) return $true }
     function script:Test-CuwHealth { param($Port) return $true }
+    function script:Test-CuwCompute { param($Paths) }
     function script:Start-Process {
         param($FilePath,$ArgumentList,$WorkingDirectory,$WindowStyle,$RedirectStandardOutput,$RedirectStandardError,[switch]$PassThru)
         $script:capturedModelArguments = $ArgumentList
@@ -48,6 +49,11 @@ if ($null -ne (Update-CuwExtraModelPaths -Paths $paths)) { throw 'Removing all r
 Invoke-CuwStart -Paths $paths -Port 18188 | Out-Null
 $arguments = & $module { $script:capturedModelArguments }
 if ($arguments -match '--extra-model-paths-config') { throw 'Startup retained stale external references' }
+if ($arguments -match '--cpu') { throw 'GPU silently downgraded to CPU' }
+$paths.Hardware = Get-CuwHardwareProfiles $repo | Where-Object { $_.id -eq 'cpu' }
+Invoke-CuwStart -Paths $paths -Port 18188 | Out-Null
+$arguments = & $module { $script:capturedModelArguments }
+if ($arguments -notmatch '--cpu') { throw 'CPU selection did not change launch arguments' }
 if (-not (Test-Path -LiteralPath $external)) { throw 'External folder was deleted' }
 [xml]$markup = Get-Content (Join-Path $repo 'launcher\ModelPaths.xaml') -Raw -Encoding UTF8
 $dialog = [Windows.Markup.XamlReader]::Load((New-Object Xml.XmlNodeReader($markup)))

@@ -3,7 +3,7 @@ Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase
 $repo = Split-Path -Parent $PSScriptRoot
 [xml]$xaml = Get-Content -LiteralPath (Join-Path $repo 'launcher\ComfyUIWorkbench.xaml') -Raw -Encoding UTF8
 $window = [Windows.Markup.XamlReader]::Load((New-Object Xml.XmlNodeReader($xaml)))
-$buttons = @('ChangeStorageButton','PrimaryActionButton','StopButton','ModelLibraryButton','ModelsButton','ModelPathsButton','WorkflowsButton','OutputButton','DoctorButton','MinimizeWindowButton','MaximizeWindowButton','CloseWindowButton')
+$buttons = @('HardwareButton','ChangeStorageButton','PrimaryActionButton','StopButton','ModelLibraryButton','ModelsButton','ModelPathsButton','WorkflowsButton','OutputButton','DoctorButton','MinimizeWindowButton','MaximizeWindowButton','CloseWindowButton')
 $script:clickCount = 0
 foreach ($name in $buttons) {
     $button = $window.FindName($name)
@@ -52,4 +52,4 @@ Refresh-CuwLauncher
 if ($script:HeroTitle.Text -ne '先准备工作台' -or $script:PrimaryActionButton.Content -ne '准备工作台') { throw 'Missing environment must retain setup guidance' }
 $window.Close()
 Write-Output 'PASS: installed/stopped, running and not-installed status copy; launcher script syntax.'
-Write-Output 'PASS: 12 accessible buttons and click events; 10 status bindings; draggable/resizable custom chrome; valid WPF XAML.'
+Write-Output 'PASS: 13 accessible buttons and click events; status bindings; draggable/resizable custom chrome; valid WPF XAML.'

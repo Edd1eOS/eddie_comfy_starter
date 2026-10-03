@@ -4,6 +4,7 @@ param(
     [string]$DataRoot,
     [ValidateRange(1024,65535)][int]$Port = 8188,
     [string]$ModelId,
+    [ValidateSet('nvidia','nvidia-legacy','amd','intel','cpu')][string]$Hardware,
     [switch]$AcceptLicense
 )
 
@@ -14,6 +15,11 @@ if ([string]::IsNullOrWhiteSpace($DataRoot)) { $DataRoot = Join-Path $repository
 $paths = Get-CuwPaths -RepositoryRoot $repositoryRoot -DataRoot $DataRoot
 
 try {
+    if ($Hardware) {
+        if ($Command -ne 'setup') { throw '-Hardware 仅用于 setup；其他操作沿用已保存的选择。' }
+        Set-CuwHardwareProfile -Paths $paths -ProfileId $Hardware
+        $paths = Get-CuwPaths -RepositoryRoot $repositoryRoot -DataRoot $DataRoot
+    }
     switch ($Command) {
         'setup' { Invoke-CuwSetup -Paths $paths }
         'start' { Invoke-CuwStart -Paths $paths -Port $Port }

@@ -438,6 +438,8 @@ function Invoke-CuwStart {
         '--output-directory', $Paths.OutputRoot,
         '--temp-directory', $Paths.TempRoot
     )
+    $extraModelPaths = Update-CuwExtraModelPaths -Paths $Paths
+    if ($null -ne $extraModelPaths) { $arguments += @('--extra-model-paths-config', $extraModelPaths) }
     $argumentLine = (($arguments | ForEach-Object { ConvertTo-CuwCommandLineArgument -Value ([string]$_) }) -join ' ')
     Write-Output ("正在启动创作服务：http://127.0.0.1:{0}" -f $Port)
     $process = Start-Process -FilePath $runtime.PythonPath -ArgumentList $argumentLine -WorkingDirectory $runtime.ComfyRoot -WindowStyle Hidden -RedirectStandardOutput $stdout -RedirectStandardError $stderr -PassThru
@@ -547,7 +549,10 @@ function Open-CuwPath {
     Start-Process -FilePath 'explorer.exe' -ArgumentList ('"{0}"' -f $Path)
 }
 
+. (Join-Path $PSScriptRoot 'ComfyUIWorkbench.ModelPaths.ps1')
+
 Export-ModuleMember -Function @(
+    'Get-CuwModelPathTypes','Get-CuwExternalModelPaths','Save-CuwExternalModelPaths','Update-CuwExtraModelPaths',
     'New-CuwException','Get-CuwExitCode','Resolve-CuwDataRoot','Get-CuwPaths','Initialize-CuwLayout',
     'Read-CuwJson','Write-CuwJsonAtomic','Get-CuwRuntimeInfo','Get-CuwFileHashValue','Invoke-CuwSetup',
     'Format-CuwByteSize','Get-CuwModelCatalog','Get-CuwApprovedModel','Get-CuwModelState','Invoke-CuwModelDownload',

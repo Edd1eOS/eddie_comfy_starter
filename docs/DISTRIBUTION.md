@@ -1,5 +1,7 @@
 # Distribution Plan
 
+当前离线便携包的实际结构与构建方式见 [OFFLINE_PACKAGE.md](OFFLINE_PACKAGE.md)。以下保留早期设计背景，离线包行为以该文档为准。
+
 ## 目标结构
 
 ```text

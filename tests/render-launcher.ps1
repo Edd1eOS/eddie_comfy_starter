@@ -1,10 +1,18 @@
 ﻿[CmdletBinding()]
-param([string]$OutputPath = (Join-Path $env:TEMP 'comfyui-workbench-launcher.png'))
+param(
+    [string]$OutputPath = (Join-Path $env:TEMP 'comfyui-workbench-launcher.png'),
+    [int]$Width = 1120,
+    [int]$Height = 760,
+    [switch]$ExpandLogs,
+    [switch]$ReadyPreview,
+    [switch]$ModelPathsPreview
+)
 
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase
 $repositoryRoot = Split-Path -Parent $PSScriptRoot
 $xamlPath = Join-Path $repositoryRoot 'launcher\ComfyUIWorkbench.xaml'
+if ($ModelPathsPreview) { $xamlPath = Join-Path $repositoryRoot 'launcher\ModelPaths.xaml' }
 [xml]$xaml = Get-Content -LiteralPath $xamlPath -Raw -Encoding UTF8
 $reader = New-Object Xml.XmlNodeReader($xaml)
 $window = [Windows.Markup.XamlReader]::Load($reader)
@@ -13,11 +21,24 @@ $window.ResizeMode = 'NoResize'
 $window.ShowInTaskbar = $false
 $window.Left = -20000
 $window.Top = -20000
-$window.Width = 1120
-$window.Height = 760
+$window.Width = $Width
+$window.Height = $Height
+if ($ModelPathsPreview) {
+    Import-Module (Join-Path $repositoryRoot 'src\ComfyUIWorkbench.Core.psm1') -Force
+    $types = @(Get-CuwModelPathTypes)
+    $window.FindName('TypeSelector').ItemsSource = $types
+    $window.FindName('TypeSelector').SelectedIndex = 0
+    $window.FindName('TypeDescription').Text = $types[0].Description
+    $window.FindName('DefaultPathText').Text = Join-Path $repositoryRoot 'data\userdata\models\checkpoints'
+}
+if ($ReadyPreview) {
+    $window.FindName('PrimaryActionButton').Content = '打开创作界面'
+    $window.FindName('StatusText').Text = '环境已就绪'
+}
+if ($ExpandLogs) { $window.FindName('LogExpander').IsExpanded = $true }
 $window.Show()
 $window.UpdateLayout()
-$bitmap = New-Object Windows.Media.Imaging.RenderTargetBitmap(1120, 760, 96, 96, [Windows.Media.PixelFormats]::Pbgra32)
+$bitmap = New-Object Windows.Media.Imaging.RenderTargetBitmap($Width, $Height, 96, 96, [Windows.Media.PixelFormats]::Pbgra32)
 $bitmap.Render($window)
 $encoder = New-Object Windows.Media.Imaging.PngBitmapEncoder
 $encoder.Frames.Add([Windows.Media.Imaging.BitmapFrame]::Create($bitmap))

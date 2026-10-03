@@ -1,0 +1,57 @@
+{
+  "name": "绿色花海-8秒视频演示",
+  "comfyui": "0.37.0",
+  "nodes": [
+    "UNETLoader",
+    "CLIPLoader",
+    "VAELoader",
+    "CLIPTextEncode",
+    "CLIPTextEncode",
+    "LoadImage",
+    "Wan22ImageToVideoLatent",
+    "ModelSamplingSD3",
+    "KSampler",
+    "VAEDecodeTiled",
+    "CreateVideo",
+    "SaveVideo"
+  ],
+  "customNodes": [],
+  "paidApi": false,
+  "input": "green-flower-reference.png",
+  "parameters": {
+    "width": 448,
+    "height": 800,
+    "frames": 129,
+    "fps": 16,
+    "steps": 24,
+    "cfg": 5,
+    "seed": 43567219
+  },
+  "models": [
+    {
+      "repo": "Comfy-Org/Wan_2.2_ComfyUI_Repackaged",
+      "revision": "ee6f4a40737a995bf5818954cfce6d59443b0f04",
+      "path": "diffusion_models/wan2.2_ti2v_5B_fp16.safetensors",
+      "size": 9999658848,
+      "sha256": "456f901338bd9eadbded3828b819109a9b68e8a525ca5cf8d0049a69fcfeca1e",
+      "license": "Apache-2.0"
+    },
+    {
+      "repo": "Comfy-Org/Wan_2.1_ComfyUI_repackaged",
+      "revision": "123acf1cc74bccbb9bfff8ac1ee72edc08c2341d",
+      "path": "text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+      "size": 6735906897,
+      "sha256": "c3355d30191f1f066b26d93fba017ae9809dce6c627dda5f6a66eaa651204f68",
+      "license": "Apache-2.0"
+    },
+    {
+      "repo": "Comfy-Org/Wan_2.2_ComfyUI_Repackaged",
+      "revision": "ee6f4a40737a995bf5818954cfce6d59443b0f04",
+      "path": "vae/wan2.2_vae.safetensors",
+      "size": 1409400960,
+      "sha256": "e40321bd36b9709991dae2530eb4ac303dd168276980d3e9bc4b6e2b75fed156",
+      "license": "Apache-2.0"
+    }
+  ],
+  "installation": "This machine: existing verified model files linked into data/userdata/models using NTFS hard links. No additional disk copy. Input and output stay local and are not included in Git."
+}

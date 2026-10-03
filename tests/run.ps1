@@ -59,13 +59,15 @@ try {
     Assert-CuwTest $true 'model library XAML parses as XML'
 
     $launcherSource = Get-Content -LiteralPath (Join-Path $repositoryRoot 'launcher\ComfyUIWorkbench.xaml') -Raw -Encoding UTF8
-    Assert-CuwTest ($launcherSource -match '模型决定能生成什么' -and $launcherSource -match '浏览并下载模型' -and $launcherSource -match '保存好的一套生成步骤' -and $launcherSource -match '所有结果保存在本地') 'home cards explain concepts and expose the model library in plain language'
+    Assert-CuwTest ($launcherSource -match 'ModelLibraryButton' -and $launcherSource -match 'WorkflowsButton' -and $launcherSource -match 'OutputButton') 'home cards expose model library, workflows and output actions independently of editable copy'
 
     $coreSource = Get-Content -LiteralPath (Join-Path $repositoryRoot 'src\ComfyUIWorkbench.Core.psm1') -Raw -Encoding UTF8
     Assert-CuwTest ($coreSource -match "'--listen', '127\.0\.0\.1'" -and $coreSource -match "'--disable-api-nodes'") 'service is loopback-only and online API nodes are disabled by default'
 }
 finally {
-    if (Test-Path -LiteralPath $testRoot) { Remove-Item -LiteralPath $testRoot -Recurse -Force }
+    $resolvedTestRoot = [IO.Path]::GetFullPath($testRoot)
+    if (-not $resolvedTestRoot.StartsWith([IO.Path]::GetFullPath($env:TEMP).TrimEnd('\') + '\comfyui-workbench-tests-', [StringComparison]::OrdinalIgnoreCase)) { throw 'Unsafe test cleanup path' }
+    if (Test-Path -LiteralPath $resolvedTestRoot) { Remove-Item -LiteralPath $resolvedTestRoot -Recurse -Force }
 }
 
 Write-Output ("Tests: {0} passed, {1} failed" -f $script:Passed, $script:Failed)

@@ -10,14 +10,19 @@ $cliPath = Join-Path $repositoryRoot 'scripts\cuw.ps1'
 $xamlPath = Join-Path $PSScriptRoot 'ComfyUIWorkbench.xaml'
 $modelLibraryXamlPath = Join-Path $PSScriptRoot 'ModelLibrary.xaml'
 Import-Module $modulePath -Force
+. (Join-Path $repositoryRoot 'src\ComfyUIWorkbench.ModelPathsDialog.ps1')
 
 $settingsRoot = Join-Path $env:LOCALAPPDATA 'ComfyUIWorkbench'
+$portableMode = Test-Path -LiteralPath (Join-Path $repositoryRoot 'portable.mode')
+if ($portableMode) { $settingsRoot = Join-Path $repositoryRoot 'data\launcher-settings' }
 $settingsPath = Join-Path $settingsRoot 'settings.json'
 if (-not (Test-Path -LiteralPath $settingsRoot -PathType Container)) { $null = New-Item -ItemType Directory -Path $settingsRoot -Force }
 $script:DataRoot = Join-Path $repositoryRoot 'data'
 $saved = Read-CuwJson -Path $settingsPath -Optional
 if ($null -ne $saved -and -not [string]::IsNullOrWhiteSpace([string]$saved.dataRoot)) {
-    $script:DataRoot = Resolve-CuwDataRoot -Path ([string]$saved.dataRoot)
+    $savedRoot = [string]$saved.dataRoot
+    if ($portableMode -and -not [IO.Path]::IsPathRooted($savedRoot)) { $savedRoot = Join-Path $repositoryRoot $savedRoot }
+    $script:DataRoot = Resolve-CuwDataRoot -Path $savedRoot
 }
 $script:Port = 8188
 $script:ActionProcess = $null
@@ -30,11 +35,21 @@ $script:LastOutput = ''
 $reader = New-Object Xml.XmlNodeReader($xaml)
 $window = [Windows.Markup.XamlReader]::Load($reader)
 
+# WindowChrome retains native drag, double-click maximize and edge resizing.
+$window.FindName('MinimizeWindowButton').Add_Click({ $window.WindowState = 'Minimized' })
+$window.FindName('MaximizeWindowButton').Add_Click({
+    if ($window.WindowState -eq 'Maximized') { $window.WindowState = 'Normal' }
+    else { $window.WindowState = 'Maximized' }
+})
+$window.FindName('CloseWindowButton').Add_Click({ $window.Close() })
+
 $names = @('StatusPill','StatusText','ChangeStorageButton','HeroTitle','HeroDescription','PrimaryActionButton','StopButton','GpuText','StorageText','ModelLibraryButton','ModelsButton','WorkflowsButton','OutputButton','CountsText','DoctorButton','LogExpander','BusyBar','LogText')
 foreach ($name in $names) { Set-Variable -Name $name -Value $window.FindName($name) -Scope Script }
 
 function Save-CuwLauncherSettings {
-    Write-CuwJsonAtomic -Path $settingsPath -Value ([ordered]@{ dataRoot = $script:DataRoot })
+    $rootToSave = $script:DataRoot
+    if ($portableMode -and $script:DataRoot.TrimEnd('\') -eq (Join-Path $repositoryRoot 'data')) { $rootToSave = 'data' }
+    Write-CuwJsonAtomic -Path $settingsPath -Value ([ordered]@{ dataRoot = $rootToSave })
 }
 
 function Set-CuwLogText {
@@ -61,8 +76,8 @@ function Refresh-CuwLauncher {
         elseif ($summary.Installed) {
             $script:StatusPill.Background = [Windows.Media.BrushConverter]::new().ConvertFromString('#E8E7FF')
             $script:StatusText.Foreground = [Windows.Media.BrushConverter]::new().ConvertFromString('#4D46B8')
-            $script:HeroTitle.Text = '从一个工作流开始'
-            $script:HeroDescription.Text = 'ComfyUI 用节点连接图片或视频的生成步骤。工作台负责环境、文件与启动，你不需要配置 Python。'
+            $script:HeroTitle.Text = '点击下面的按钮打开webui'
+            $script:HeroDescription.Text = '本地离线运行的工作站，已完成环境配置和依赖打包'
             $script:PrimaryActionButton.Content = '打开创作界面'
         }
         else {
@@ -248,6 +263,12 @@ $script:StopButton.Add_Click({ Start-CuwLauncherAction -Command 'stop' -DisplayN
 $script:DoctorButton.Add_Click({ Start-CuwLauncherAction -Command 'doctor' -DisplayName '检查问题' })
 $script:ModelLibraryButton.Add_Click({ Show-CuwModelLibrary })
 $script:ModelsButton.Add_Click({ Start-CuwLauncherAction -Command 'open-models' -DisplayName '打开模型文件夹' })
+$window.FindName('ModelPathsButton').Add_Click({
+    try {
+        $paths = Get-CuwPaths -RepositoryRoot $repositoryRoot -DataRoot $script:DataRoot
+        Show-CuwModelPathsDialog -Owner $window -Paths $paths -XamlPath (Join-Path $PSScriptRoot 'ModelPaths.xaml')
+    } catch { [Windows.MessageBox]::Show($_.Exception.Message, '模型路径设置', 'OK', 'Warning') | Out-Null }
+})
 $script:WorkflowsButton.Add_Click({ Start-CuwLauncherAction -Command 'open-workflows' -DisplayName '打开工作流文件夹' })
 $script:OutputButton.Add_Click({ Start-CuwLauncherAction -Command 'open-output' -DisplayName '打开输出文件夹' })
 $script:ChangeStorageButton.Add_Click({

@@ -88,6 +88,9 @@ function Refresh-CuwLauncher {
             $script:HeroDescription.Text = '先选择显卡或 CPU，再一键下载对应环境。Python 和所需组件保存在独立目录，不影响系统环境。'
             $script:PrimaryActionButton.Content = '准备工作台'
         }
+        if ($paths.Hardware.backend -eq 'xpu' -and $summary.Installed) {
+            $script:HeroDescription.Text = 'Intel 全精度兼容模式；首次生成/训练可能预热数分钟。LoRA 训练节点请选择 fp32；小规模测试通过不代表所有模型、视频或完整训练任务都可用。'
+        }
     }
     catch {
         $script:StatusText.Text = '状态读取失败'

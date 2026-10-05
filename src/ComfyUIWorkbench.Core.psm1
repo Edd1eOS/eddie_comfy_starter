@@ -445,11 +445,19 @@ function Invoke-CuwStart {
         '--temp-directory', $Paths.TempRoot
     )
     if ($Paths.Hardware.backend -eq 'cpu') { $arguments += '--cpu' }
+    if ($Paths.Hardware.backend -eq 'xpu') {
+        # Validated on Intel integrated graphics. Keep CLIP on CPU with lowvram;
+        # avoid auto FP16/BF16 and dynamic VRAM, without silently switching sampling to CPU.
+        $arguments += @('--force-fp32', '--fp32-text-enc', '--lowvram', '--disable-dynamic-vram', '--use-split-cross-attention')
+        Write-Output 'Intel 兼容模式：全精度、分块注意力、低显存；采样仍使用 Intel GPU。首次生成/训练可能预热数分钟；训练节点请选择 fp32，小规模测试不代表所有训练任务可用。'
+    }
     $extraModelPaths = Update-CuwExtraModelPaths -Paths $Paths
     if ($null -ne $extraModelPaths) { $arguments += @('--extra-model-paths-config', $extraModelPaths) }
     $argumentLine = (($arguments | ForEach-Object { ConvertTo-CuwCommandLineArgument -Value ([string]$_) }) -join ' ')
     Write-Output ("正在启动创作服务：http://127.0.0.1:{0}" -f $Port)
-    $process = Start-Process -FilePath $runtime.PythonPath -ArgumentList $argumentLine -WorkingDirectory $runtime.ComfyRoot -WindowStyle Hidden -RedirectStandardOutput $stdout -RedirectStandardError $stderr -PassThru
+    $process = Invoke-CuwBackendEnvironment $Paths {
+        Start-Process -FilePath $runtime.PythonPath -ArgumentList $argumentLine -WorkingDirectory $runtime.ComfyRoot -WindowStyle Hidden -RedirectStandardOutput $stdout -RedirectStandardError $stderr -PassThru
+    }
     Write-CuwJsonAtomic -Path $Paths.StatePath -Value ([ordered]@{
         pid = $process.Id
         port = $Port
@@ -491,6 +499,13 @@ function Invoke-CuwStop {
 }
 
 function Get-CuwGpuSummary {
+    param([string]$Backend = '')
+    if ($Backend -eq 'cpu') { return 'CPU 模式（不使用显卡）' }
+    if ($Backend -eq 'xpu') {
+        $intel = @(Get-CimInstance Win32_VideoController -ErrorAction SilentlyContinue | Where-Object Name -Match 'Intel' | Select-Object -ExpandProperty Name)
+        if ($intel.Count) { return ($intel -join ' / ') }
+        return '未检测到 Intel 显卡；请运行计算检查'
+    }
     $nvidia = Get-Command nvidia-smi.exe -ErrorAction SilentlyContinue
     if ($null -eq $nvidia) {
         $adapters = @(Get-CimInstance Win32_VideoController -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Name)
@@ -516,6 +531,7 @@ function Get-CuwSummary {
     $status = 'notReady'
     $message = '需要准备工作台'
     if ($null -ne $runtime) { $status = 'ready'; $message = '可以开始创作' }
+    if ($null -ne $runtime -and $Paths.Hardware.backend -eq 'xpu') { $message = 'Intel 环境已准备 · 工作流需实测' }
     $installed = $null -ne $runtime
     if ($installed) {
         $check = Read-CuwJson -Path (Join-Path $Paths.VersionRoot ('compute-' + $Paths.Hardware.backend + '.json')) -Optional
@@ -534,7 +550,7 @@ function Get-CuwSummary {
         Running = $healthy
         Url = ("http://127.0.0.1:{0}" -f $Port)
         DataRoot = $Paths.DataRoot
-        Gpu = Get-CuwGpuSummary
+        Gpu = Get-CuwGpuSummary -Backend $Paths.Hardware.backend
         CheckpointCount = @(Get-ChildItem -LiteralPath $Paths.CheckpointsRoot -File -Recurse -Include '*.safetensors','*.ckpt' -ErrorAction SilentlyContinue).Count
         WorkflowCount = @(Get-ChildItem -LiteralPath $Paths.WorkflowsRoot -File -Recurse -Filter '*.json' -ErrorAction SilentlyContinue).Count
     }
@@ -544,7 +560,7 @@ function Invoke-CuwDoctor {
     param([Parameter(Mandatory = $true)]$Paths, [int]$Port = 8188)
     $failures = 0
     if ($env:OS -eq 'Windows_NT') { Write-Output '[通过] 系统：Windows' } else { Write-Output '[失败] 系统：当前启动器只支持 Windows'; $failures++ }
-    $gpu = Get-CuwGpuSummary
+    $gpu = Get-CuwGpuSummary -Backend $Paths.Hardware.backend
     Write-Output ("[信息] 设备：{0}；安装方案：{1}" -f $gpu, $Paths.Hardware.name)
     $drive = Get-PSDrive -Name ([IO.Path]::GetPathRoot($Paths.DataRoot).Substring(0,1)) -ErrorAction SilentlyContinue
     if ($null -ne $drive) { Write-Output ("[通过] 存储空间：剩余 {0:N1} GB" -f ($drive.Free / 1GB)) }

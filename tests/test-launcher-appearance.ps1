@@ -50,6 +50,11 @@ $script:previewSummary.Status = 'notReady'
 $script:previewSummary.Installed = $false
 Refresh-CuwLauncher
 if ($script:HeroTitle.Text -ne '先准备工作台' -or $script:PrimaryActionButton.Content -ne '准备工作台') { throw 'Missing environment must retain setup guidance' }
+function Get-CuwPaths { param($RepositoryRoot, $DataRoot) return @{Hardware=@{backend='xpu';name='Intel'}} }
+$script:previewSummary.Status = 'ready'
+$script:previewSummary.Installed = $true
+Refresh-CuwLauncher
+if ($script:HeroDescription.Text -notmatch '全精度' -or $script:HeroDescription.Text -notmatch 'LoRA') { throw 'Intel compatibility limits are missing' }
 $window.Close()
 Write-Output 'PASS: installed/stopped, running and not-installed status copy; launcher script syntax.'
 Write-Output 'PASS: 13 accessible buttons and click events; status bindings; draggable/resizable custom chrome; valid WPF XAML.'

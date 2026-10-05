@@ -3,7 +3,7 @@
     {"id":"nvidia","name":"NVIDIA · RTX 20 系列及更新","runtime":"nvidia","backend":"cuda","note":"需要兼容 CUDA 13 的 NVIDIA 驱动。复用现有 NVIDIA 环境。","fileName":"ComfyUI_windows_portable_nvidia.7z","sha256":"7805f634fab51f63a238aaf0cfe2a9833bb7c86ddfc8400a60919f44460d7d65"},
     {"id":"nvidia-legacy","name":"NVIDIA · 旧显卡（CUDA 12.6）","runtime":"nvidia-cu126","backend":"cuda","note":"官方旧卡包，供 GTX 10 系列等旧型号尝试；不是所有旧卡都支持，安装后检查。RTX 20 系列及更新请选上方版本。","fileName":"ComfyUI_windows_portable_nvidia_cu126.7z","sha256":"4f8c587c8319a3595dcdc6b8fbfc7234d2d02fa6b1a328c1ab3e819c97d95fb8"},
     {"id":"amd","name":"AMD · Radeon（兼容性待实机验证）","runtime":"amd","backend":"hip","note":"使用官方 AMD 包；需要受 ROCm 支持的型号及新驱动，并非所有 Radeon 都支持。本项目未在 AMD 实机验证，安装后自动检查计算能力。","fileName":"ComfyUI_windows_portable_amd.7z","sha256":"563da2462a866f8fdf8ccd091a8c0e185e785394408735f8e99647593a67dd79"},
-    {"id":"intel","name":"Intel · Arc（兼容性待实机验证）","runtime":"intel","backend":"xpu","note":"使用官方 Intel XPU 包，需要兼容的 Arc 显卡及驱动；不保证普通 Intel 核显可用。本项目未在 Intel 实机验证，安装后自动检查。","fileName":"ComfyUI_windows_portable_intel.7z","sha256":"1041af3a25ca2c7b3615db3027ca0fd40df37c1758c4e9955e762672193ac4cc"},
+    {"id":"intel","name":"Intel · XPU 兼容模式","runtime":"intel","backend":"xpu","note":"全精度兼容模式；本机 Core Ultra 9 核显已通过 SD1.5 出图和两步 LoRA 测试，Arc/旧 UHD/Iris 未验收。训练节点选 fp32；首次训练曾预热约 8 分钟，不代表完整训练性能。i7 是 CPU 型号，不代表显卡支持 XPU。","fileName":"ComfyUI_windows_portable_intel.7z","sha256":"1041af3a25ca2c7b3615db3027ca0fd40df37c1758c4e9955e762672193ac4cc"},
     {"id":"cpu","name":"CPU · 不使用显卡（速度很慢）","runtime":"nvidia","backend":"cpu","note":"复用官方 NVIDIA 便携包，以 --cpu 启动，不需要 NVIDIA 显卡。仍需下载约 1.9 GB，适合小模型测试，不建议生成视频。","fileName":"ComfyUI_windows_portable_nvidia.7z","sha256":"7805f634fab51f63a238aaf0cfe2a9833bb7c86ddfc8400a60919f44460d7d65"}
   ]
 }
